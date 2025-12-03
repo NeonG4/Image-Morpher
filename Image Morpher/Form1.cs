@@ -5,14 +5,17 @@ namespace Image_Morpher
 {
     public partial class FormMorpher : Form
     {
-        int renderScale = 1;
+        int renderScale = 16;
         int width = 0;
         int height = 0;
         int ticks = 0;
         int targetTicks = 200;
         int waitingTicks = 100;
         Color[,] colors;
-        Vector2[,] positions;
+        Vector2[,] targetPositions;
+        Vector2[] acceleration;
+        Vector2[] velocity;
+        Vector2[] positions;
         Bitmap[] bitmaps;
 
         float progress = 0.0f;
@@ -24,20 +27,25 @@ namespace Image_Morpher
             width = bitmaps[0].Width;
             height = bitmaps[0].Height;
 
+            acceleration = new Vector2[width * height];
+            velocity = new Vector2[width * height];
             colors = new Color[width * height, bitmaps.Length];
-            positions = new Vector2[width * height, bitmaps.Length];
+            targetPositions = new Vector2[width * height, bitmaps.Length];
+            positions = new Vector2[width * height];
 
             List<Vector2> targets = new List<Vector2>();
+            Random rnd = new Random();
             for (int i = 0; i < width; i++)
             {
                 for (int j = 0; j < height; j++)
                 {
                     targets.Add(new Vector2(i, j));
+                    velocity[i * width + j] = new Vector2(rnd.Next(-5, 5), rnd.Next(-5, 5));
+                    positions[i * width + j] = new Vector2(i, j);
                 }
             }
             for (int img = 0; img < bitmaps.Length; img++)
             {
-                Random rnd = new Random();
                 targets = targets.OrderBy(item => rnd.Next()).ToList();
                 for (int i = 0; i < width; i++)
                 {
@@ -45,7 +53,7 @@ namespace Image_Morpher
                     {
                         Color color = bitmaps[img].GetPixel((int)targets[i * width + j].X, (int)targets[i * width + j].Y);
                         colors[i * width + j, img] = color;
-                        positions[i * width + j, img] = targets[i * width + j];
+                        targetPositions[i * width + j, img] = targets[i * width + j];
                     }
                 }
             }
@@ -56,7 +64,7 @@ namespace Image_Morpher
             e.Graphics.Clear(Color.Black);
             for (int i = 0; i < width * height; i++)
             {
-                Vector2 pos = Vector2.Lerp(positions[i, (int)Math.Floor(progress)], positions[i, (int)Math.Ceiling(progress)], (progress % 1));
+                Vector2 pos = Vector2.Lerp(targetPositions[i, (int)Math.Floor(progress)], targetPositions[i, (int)Math.Ceiling(progress)], (progress % 1));
                 Color col = Color.FromArgb(
                     (int)(colors[i, (int)Math.Floor(progress)].R * (1 - (progress % 1)) + colors[i, 1 + (int)Math.Floor(progress)].R * (progress % 1)),
                     (int)(colors[i, (int)Math.Floor(progress)].G * (1 - (progress % 1)) + colors[i, 1 + (int)Math.Floor(progress)].G * (progress % 1)),
@@ -72,6 +80,15 @@ namespace Image_Morpher
         {
             ticks++;
             progress = Math.Clamp((float)(ticks - waitingTicks) / targetTicks, 0, 0.9999999f);
+            for (int i = 0; i < width; i++)
+            {
+                for (int j = 0; j < height; j++)
+                {
+                    acceleration[i * width + j] = 2 * (targetPositions[i * width + j, (int)Math.Ceiling(progress)] - positions[i * width + j] - velocity[i * width + j] * (ticks - waitingTicks));
+                    velocity[i * width + j] += acceleration[i * width + j];
+                    positions[i * width + j] += velocity[i * width + j];
+                }
+            }
             this.Refresh();
         }
     }

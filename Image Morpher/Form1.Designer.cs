@@ -44,10 +44,12 @@
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(615, 352);
             DoubleBuffered = true;
-            Margin = new Padding(2, 2, 2, 2);
+            Margin = new Padding(2);
             Name = "FormMorpher";
             Text = "Image Morpher";
+            FormClosing += FormMorpher_FormClosing;
             Paint += FormMorpher_Paint;
+            KeyPress += FormMorpher_KeyPress;
             ResumeLayout(false);
         }
 
